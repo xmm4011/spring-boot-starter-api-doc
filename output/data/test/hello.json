@@ -1,0 +1,74 @@
+{
+	"url": "/test/hello/{id}",
+	"action": "GET",
+	"request": [
+		{
+			"name": "arrays",
+			"type": "list",
+			"required": false,
+			"desc": "",
+			"childs": [
+				{
+					"name": "key",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}, {
+					"name": "value",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}
+			]
+		}, {
+			"name": "item",
+			"type": "object",
+			"required": true,
+			"desc": "",
+			"childs": [
+				{
+					"name": "key",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}, {
+					"name": "value",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}
+			]
+		}, {
+			"name": "items",
+			"type": "list",
+			"required": false,
+			"desc": "",
+			"childs": [
+				{
+					"name": "key",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}, {
+					"name": "value",
+					"type": "string",
+					"required": false,
+					"desc": ""
+				}
+			]
+		}, {
+			"name": "request",
+			"type": "string",
+			"required": true,
+			"desc": ""
+		}
+	],
+	"response": [
+		{
+			"name": "result",
+			"type": "string",
+			"required": false,
+			"desc": ""
+		}
+	]
+}

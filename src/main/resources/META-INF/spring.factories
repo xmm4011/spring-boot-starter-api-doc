@@ -1,0 +1,5 @@
+org.springframework.context.ApplicationListener=\
+top.webdevelop.gull.autoconfigure.APIDocGenerateApplicationListener
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+top.webdevelop.gull.autoconfigure.APIDocAutoConfiguration

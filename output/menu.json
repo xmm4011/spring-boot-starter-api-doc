@@ -1,0 +1,27 @@
+{
+	"tabs": [{
+		"title": "APP-H5",
+		"pages": [
+			{
+				"title": "测试页面",
+				"menus": [
+					{"title": "你好", "url": "./data/test/hello.json"},
+					{"title": "你好", "url": "./data/test/hello.json"},
+					{"title": "你好", "url": "./data/test/hello.json"}
+				]
+			}
+		]
+	}, {
+		"title": "H5",
+		"pages": [
+			{
+				"title": "测试页面2",
+				"menus": [
+					{"title": "你好2", "url": "./data/test/hello.json"},
+					{"title": "你好2", "url": "./data/test/hello.json"},
+					{"title": "你好2", "url": "./data/test/hello.json"}
+				]
+			}
+		]
+	}]
+}

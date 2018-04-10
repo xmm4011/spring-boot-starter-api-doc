@@ -1,0 +1,47 @@
+{
+  "properties": [
+    {
+      "name": "api.doc.auto",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Description for api.doc.auto."
+    },
+    {
+      "name": "api.doc.menu",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Description for api.doc.auto."
+    },
+    {
+      "name": "api.doc.override",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Description for api.doc.menu."
+    },
+    {
+      "name": "api.doc.web-root-package",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.web-root-package."
+    },
+    {
+      "name": "api.doc.include-bean-names",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.include-bean-names."
+    },
+    {
+      "name": "api.doc.include-method-names",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.include-method-names."
+    },
+    {
+      "name": "api.doc.output-current-path",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.output-current-path."
+    },
+    {
+      "name": "api.doc.output-root-path",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.output-root-path."
+    }
+  ]
+}

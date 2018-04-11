@@ -34,6 +34,16 @@
       "description": "Description for api.doc.include-method-names."
     },
     {
+      "name": "api.doc.exclude-bean-names",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.exclude-bean-names."
+    },
+    {
+      "name": "api.doc.exclude-method-names",
+      "type": "java.lang.String",
+      "description": "Description for api.doc.exclude-method-names."
+    },
+    {
       "name": "api.doc.output-current-path",
       "type": "java.lang.String",
       "description": "Description for api.doc.output-current-path."

@@ -1,5 +1,6 @@
 package top.webdevelop.gull.apidoc;
 
+import com.alibaba.fastjson.annotation.JSONType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -19,6 +20,7 @@ public class APIDocMenu implements Serializable {
     }
 
     @Data
+    @JSONType(orders = {"title", "pages"})
     public static class Tab implements Serializable {
         private String title;
         private Set<Page> pages;
@@ -52,6 +54,7 @@ public class APIDocMenu implements Serializable {
     }
 
     @Data
+    @JSONType(orders = {"title", "menus"})
     public static class Page implements Serializable {
         private String title;
         private Set<Menu> menus;

@@ -9,6 +9,7 @@ import top.webdevelop.gull.utils.ClassUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * Created by xumingming on 2018/3/24.
@@ -21,7 +22,8 @@ public enum APIDocFieldType {
     public static APIDocFieldType parse(Class classz) {
         if (ClassUtils.isSingleFieldType(classz)) {
             if (classz.equals(String.class) || classz.equals(Character.class) || classz.equals(char.class)
-                    || classz.equals(LocalDate.class) || classz.equals(LocalDateTime.class)) {
+                    || classz.equals(LocalDate.class) || classz.equals(LocalDateTime.class) || classz.equals(Date.class)
+                    || classz.equals(Enum.class) || Enum.class.equals(classz.getSuperclass())) {
                 return APIDocFieldType.string;
             }
             if (classz.equals(MultipartFile.class)) {
@@ -49,13 +51,5 @@ public enum APIDocFieldType {
 
         logger.warn("not supported type, class: {}", classz);
         return null;
-    }
-
-    public boolean isObject() {
-        return APIDocFieldType.object.equals(this);
-    }
-
-    public boolean isList() {
-        return APIDocFieldType.list.equals(this);
     }
 }

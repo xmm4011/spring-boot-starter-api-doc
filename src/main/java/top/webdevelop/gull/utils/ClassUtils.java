@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -20,6 +21,10 @@ public class ClassUtils {
         return classz.equals(Map.class);
     }
 
+    public static boolean isObjectType(Class classz) {
+        return classz.equals(Object.class);
+    }
+
     public static boolean isListType(Class classz) {
         return Collection.class.isAssignableFrom(classz) || classz.isArray();
     }
@@ -30,7 +35,8 @@ public class ClassUtils {
 
     public static boolean isPrimitive(Class classz) {
         return classz.isPrimitive() || isPrimitiveWrapClass(classz) || classz.equals(String.class)
-                || classz.equals(BigDecimal.class) || classz.equals(LocalDate.class) || classz.equals(LocalDateTime.class);
+                || classz.equals(BigDecimal.class) || classz.equals(Enum.class) || Enum.class.equals(classz.getSuperclass())
+                || classz.equals(LocalDate.class) || classz.equals(LocalDateTime.class) || classz.equals(Date.class);
     }
 
     public static boolean isPrimitiveWrapClass(Class classz) {

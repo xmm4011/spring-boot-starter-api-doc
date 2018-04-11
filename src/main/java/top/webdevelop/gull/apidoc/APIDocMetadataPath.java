@@ -2,7 +2,7 @@ package top.webdevelop.gull.apidoc;
 
 import lombok.Getter;
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.util.StringUtils;
+import top.webdevelop.gull.autoconfigure.APIDocProperties;
 
 import java.lang.reflect.Method;
 import java.util.Optional;

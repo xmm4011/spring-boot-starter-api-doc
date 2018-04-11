@@ -3,8 +3,9 @@ package top.webdevelop.gull.apidoc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.factory.config.EmbeddedValueResolver;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.EmbeddedValueResolverAware;
+import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Controller;
@@ -13,32 +14,41 @@ import org.springframework.util.StringValueResolver;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import top.webdevelop.gull.autoconfigure.APIDocProperties;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Created by xumingming on 2018/3/23.
  */
 
-public class APIDocSpringHandlerMethodMapping {
+public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAware {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
+    private static final String SCOPED_TARGET_NAME_PREFIX = "scopedTarget.";
+
     private APIDocProperties apiDocProperties;
-    private ConfigurableApplicationContext applicationContext;
+    private ApplicationContext applicationContext;
     private StringValueResolver embeddedValueResolver;
     private RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
+    private DefaultParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
+
     private APIDocMenu menu = null;
 
-    public APIDocSpringHandlerMethodMapping(APIDocProperties apiDocProperties, ConfigurableApplicationContext applicationContext) {
+    public APIDocSpringHandlerMethodMapping(APIDocProperties apiDocProperties, ApplicationContext applicationContext) {
         this.apiDocProperties = apiDocProperties;
         this.applicationContext = applicationContext;
-        this.embeddedValueResolver = new EmbeddedValueResolver(applicationContext.getBeanFactory());
+    }
+
+    @Override
+    public void setEmbeddedValueResolver(StringValueResolver resolver) {
+        this.embeddedValueResolver = resolver;
     }
 
     public void handler() {
-        String SCOPED_TARGET_NAME_PREFIX = "scopedTarget.";
         String[] beanNames = applicationContext.getBeanNamesForType(Object.class);
 
         for (String beanName : beanNames) {
@@ -84,10 +94,13 @@ public class APIDocSpringHandlerMethodMapping {
             for (Map.Entry<Method, RequestMappingInfo> entry : methods.entrySet()) {
                 Method invocableMethod = AopUtils.selectInvocableMethod(entry.getKey(), userType);
                 RequestMappingInfo mapping = entry.getValue();
+                RequestMappingInfo typeInfo = createRequestMappingInfo(userType);
 
                 if (handler.equals("basicErrorController")
-                        || !apiDocProperties.hasBean(handler.toString())
-                        || !apiDocProperties.hasMethod(invocableMethod.getName())) {
+                        || !apiDocProperties.hasIncludeBean(handler.toString())
+                        || !apiDocProperties.hasIncludeMethod(invocableMethod.getName())
+                        || apiDocProperties.hasExcludeBean(handler.toString())
+                        || apiDocProperties.hasExcludeMethod(invocableMethod.getName())) {
                     continue;
                 }
 
@@ -95,15 +108,15 @@ public class APIDocSpringHandlerMethodMapping {
                 logger.info("APIDoc detect Method {}", invocableMethod);
 
                 APIDocMetadataPath path = APIDocMetadataPath.newBuilder().setApiDocProperties(apiDocProperties).setMethod(invocableMethod).build();
-                APIDoc doc = APIDocBuilder.newInstance().setRequestMappingInfo(mapping).setMethod(invocableMethod).build();
+                APIDoc doc = APIDocBuilder.newInstance().setParameterNameDiscoverer(parameterNameDiscoverer).setRequestMappingInfo(mapping).setMethod(invocableMethod).build();
                 APIDocMetadataGenerator.newInstance().generate(path, doc);
 
-                this.menu = buildAPIDocMenu(this.menu, path, doc);
+                this.menu = buildAPIDocMenu(typeInfo, this.menu, path, doc);
             }
         }
     }
 
-    private APIDocMenu buildAPIDocMenu(APIDocMenu menu, APIDocMetadataPath path, APIDoc doc) {
+    private APIDocMenu buildAPIDocMenu(RequestMappingInfo typeInfo, APIDocMenu menu, APIDocMetadataPath path, APIDoc doc) {
         if (!apiDocProperties.isMenu()) {
             return menu;
         }
@@ -112,7 +125,7 @@ public class APIDocSpringHandlerMethodMapping {
         }
         String[] splitPackage = path.getRelativePackage().split("\\.");
         String tabTitle = splitPackage.length > 1 ? splitPackage[1] : "default";
-        String pageTitle = splitPackage.length > 0 ? splitPackage[splitPackage.length - 1] : "default";
+        String pageTitle = Optional.ofNullable(removeBrackets(typeInfo.getPatternsCondition().toString())).filter(x -> x.length() > 0).orElse("default");
         APIDocMenu.Tab tab = menu.getTabs().stream().filter(i -> i.getTitle().equals(tabTitle)).findFirst().orElse(new APIDocMenu.Tab(tabTitle));
         APIDocMenu.Page page = tab.getPages().stream().filter(i -> i.getTitle().equals(pageTitle)).findFirst().orElse(new APIDocMenu.Page(pageTitle));
 
@@ -182,5 +195,12 @@ public class APIDocSpringHandlerMethodMapping {
     private boolean isHandler(Class<?> beanType) {
         return (AnnotatedElementUtils.hasAnnotation(beanType, Controller.class) ||
                 AnnotatedElementUtils.hasAnnotation(beanType, RequestMapping.class));
+    }
+
+    private String removeBrackets(String str) {
+        if (str == null || str.length() < 2) {
+            return str;
+        }
+        return str.substring(1, str.length() - 1);
     }
 }

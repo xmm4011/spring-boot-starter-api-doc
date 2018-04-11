@@ -104,12 +104,15 @@ public class APIDocBuilder {
     private List<APIDoc.Field> parseAPIDocFieldByClass(Class<?> classz, Type type, MethodParameter parameter) {
         List<APIDoc.Field> fields = new ArrayList<>();
 
-        RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
-        APIDoc.Field field = new APIDoc.Field((requestParam == null || StringUtils.isEmpty(requestParam.name())) ?
-                parameter.getParameterName() : requestParam.name(), APIDocFieldType.parse(classz), requestParam != null && requestParam.required());
-        fields.add(field);
+        if (ClassUtils.isSingleFieldType(classz)) {
+            RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+            APIDoc.Field field = new APIDoc.Field((requestParam == null || StringUtils.isEmpty(requestParam.name())) ?
+                    parameter.getParameterName() : requestParam.name(), APIDocFieldType.parse(classz), requestParam != null && requestParam.required());
 
-        field.setChilds(parseAPIDocFieldByClass(classz.getSuperclass(), classz, type));
+            fields.add(field);
+        } else {
+            fields.addAll(parseAPIDocFieldByClass(classz.getSuperclass(), classz, type));
+        }
 
         return fields;
     }
@@ -205,6 +208,7 @@ public class APIDocBuilder {
         if (type instanceof Class) {
             return (Class<?>) type;
         } else if (type instanceof WildcardTypeImpl) {
+            //TODO
             return Object.class;
         } else {
             return ((ParameterizedTypeImpl) type).getRawType();

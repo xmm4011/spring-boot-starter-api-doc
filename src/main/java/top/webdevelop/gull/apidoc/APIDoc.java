@@ -1,5 +1,6 @@
 package top.webdevelop.gull.apidoc;
 
+import com.alibaba.fastjson.annotation.JSONType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.util.List;
  */
 @Data
 @AllArgsConstructor
+@JSONType(orders = {"url", "action", "request", "response"})
 public class APIDoc implements Serializable {
     private String url;
     private String action;
@@ -19,6 +21,7 @@ public class APIDoc implements Serializable {
     private List<Field> response;
 
     @Data
+    @JSONType(orders = {"name", "type", "required", "desc"})
     static class Field implements Serializable {
         private String name;
         private APIDocFieldType type;

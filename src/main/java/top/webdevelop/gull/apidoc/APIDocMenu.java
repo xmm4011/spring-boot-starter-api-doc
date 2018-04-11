@@ -5,8 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Created by xumingming on 2018/4/9.
@@ -16,17 +17,17 @@ public class APIDocMenu implements Serializable {
     private Set<Tab> tabs;
 
     public APIDocMenu() {
-        this.tabs = new HashSet<>();
+        this.tabs = new TreeSet<>();
     }
 
     @Data
     @JSONType(orders = {"title", "pages"})
-    public static class Tab implements Serializable {
+    public static class Tab implements Serializable, Comparable<Tab> {
         private String title;
         private Set<Page> pages;
 
         public Tab() {
-            this.pages = new HashSet<>();
+            this.pages = new TreeSet<>();
         }
 
         public Tab(String title) {
@@ -51,16 +52,22 @@ public class APIDocMenu implements Serializable {
             result = 31 * result + title.hashCode();
             return result;
         }
+
+
+        @Override
+        public int compareTo(Tab o) {
+            return this.title.compareTo(o.title);
+        }
     }
 
     @Data
     @JSONType(orders = {"title", "menus"})
-    public static class Page implements Serializable {
+    public static class Page implements Serializable, Comparable<Page> {
         private String title;
         private Set<Menu> menus;
 
         public Page() {
-            this.menus = new HashSet<>();
+            this.menus = new LinkedHashSet<>();
         }
 
         public Page(String title) {
@@ -84,6 +91,11 @@ public class APIDocMenu implements Serializable {
             int result = super.hashCode();
             result = 31 * result + title.hashCode();
             return result;
+        }
+
+        @Override
+        public int compareTo(Page o) {
+            return this.title.compareTo(o.title);
         }
     }
 

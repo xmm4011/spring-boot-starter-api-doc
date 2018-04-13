@@ -23,16 +23,16 @@ mvn clean install
 * 在`application.properties`添加，如下：
 
 ```properties
-#api.doc.auto=true
+api.doc.auto=true
 #api.doc.menu=false
 #api.doc.override=false
-#api.doc.web-root-package=top.webdevelop.gull.web
+api.doc.web-root-package=top.webdevelop.gull.web
 #api.doc.include-bean-names=
 #api.doc.include-method-names=
 #api.doc.exclude-bean-names=
 #api.doc.exclude-method-names=
 #api.doc.output-current-path=
-#api.doc.output-root-path=/Users/xxx/Downloads/test/doc
+api.doc.output-root-path=/Users/xxx/Downloads/test/doc
 ```
 
 ### 4. 发布output静态资源

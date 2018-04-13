@@ -89,6 +89,11 @@ body {
 .sidebar .active > a > .fa.arrow:before {
   content: "\f107";
 }
+.sidebar .nav li a {
+  overflow: hidden;
+  text-overflow:ellipsis;
+  white-space: nowrap;
+}
 .sidebar .nav-second-level li,
 .sidebar .nav-third-level li {
   border-bottom: none !important;

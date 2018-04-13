@@ -14,6 +14,7 @@ import java.util.Arrays;
 @ConfigurationProperties("api.doc")
 @Data
 public class APIDocProperties {
+    private boolean auto;
     private boolean menu;
     private boolean override;
     private String webRootPackage = "";

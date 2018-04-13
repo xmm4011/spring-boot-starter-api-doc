@@ -21,7 +21,7 @@ public class APIDoc implements Serializable {
     private List<Field> response;
 
     @Data
-    @JSONType(orders = {"name", "type", "required", "desc"})
+    @JSONType(orders = {"name", "type", "required", "desc", "childs"})
     static class Field implements Serializable {
         private String name;
         private APIDocFieldType type;

@@ -7,11 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.core.annotation.SynthesizingMethodParameter;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
+import sun.reflect.generics.reflectiveObjects.TypeVariableImpl;
 import sun.reflect.generics.reflectiveObjects.WildcardTypeImpl;
 import top.webdevelop.gull.utils.ClassUtils;
 
@@ -21,10 +23,7 @@ import javax.validation.constraints.NotNull;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,7 +62,7 @@ public class APIDocBuilder {
         return new APIDoc(parseAPIDocUrl(), parseAPIDocAction(), parseAPIDocRequest(), parseAPIDocResponse());
     }
 
-    private String parseAPIDocUrl() {
+    String parseAPIDocUrl() {
         return removeBrackets(this.requestMappingInfo.getPatternsCondition().toString());
     }
 
@@ -81,7 +80,7 @@ public class APIDocBuilder {
 
         return parameters.stream()
                 .filter(this::nonIgnoreRequestParam)
-                .map(parameter -> this.parseAPIDocFieldByClass(parameter.getParameterType(), parameter.getGenericParameterType(), parameter))
+                .map(parameter -> this.parseAPIDocFieldByClass(parameter.getGenericParameterType(), parameter, parameter.getParameterType(), parameter.getGenericParameterType()))
                 .reduce(new ArrayList<>(), (left, right) -> {
                     left.addAll(right);
                     return left;
@@ -98,10 +97,12 @@ public class APIDocBuilder {
             return Collections.singletonList(new APIDoc.Field("direct return", APIDocFieldType.parse(returnType), false));
         }
 
-        return parseAPIDocFieldByClass(returnType.getSuperclass(), returnType, this.method.getGenericReturnType());
+        List<Class<?>> parents = new ArrayList<>();
+        parents.add(returnType.getSuperclass());
+        return parseAPIDocFieldByClass(this.method.getGenericReturnType(), parents, returnType, this.method.getGenericReturnType());
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByClass(Class<?> classz, Type type, MethodParameter parameter) {
+    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, MethodParameter parameter, Class<?> classz, Type type) {
         List<APIDoc.Field> fields = new ArrayList<>();
 
         if (ClassUtils.isSingleFieldType(classz)) {
@@ -111,49 +112,52 @@ public class APIDocBuilder {
 
             fields.add(field);
         } else {
-            fields.addAll(parseAPIDocFieldByClass(classz.getSuperclass(), classz, type));
+            List<Class<?>> parents = new ArrayList<>();
+            parents.add(classz.getSuperclass());
+            fields.addAll(parseAPIDocFieldByClass(rootType, parents, classz, type));
         }
 
         return fields;
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByClass(Class<?> parent, Class<?> classz, Type type) {
+    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
         if (ClassUtils.isListType(classz)) {
-            return parseAPIDocFieldByList(parent, classz, type);
+            return parseAPIDocFieldByList(rootType, parents, classz, type);
         }
         if (ClassUtils.isMappingType(classz)) {
-            return parseAPIDocFieldByBean(parent, classz, type);
+            return parseAPIDocFieldByBean(rootType, parents, classz, type);
         }
         return new ArrayList<>();
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByList(Class<?> parent, Class<?> classz, Type type) {
+    private List<APIDoc.Field> parseAPIDocFieldByList(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
         if (classz.isArray()) {
-            return parseAPIDocFieldByBean(parent, classz.getComponentType(), type);
+            return parseAPIDocFieldByClass(rootType, parents, classz.getComponentType(), type);
         } else {
             Type actualTypeArgument = getActualTypeArgument(type, 0);
             if (actualTypeArgument == null) {
                 return new ArrayList<>();
             }
 
-            return parseAPIDocFieldByClass(parent, getRawType(actualTypeArgument), actualTypeArgument);
+            return parseAPIDocFieldByClass(rootType, parents, getRawType(actualTypeArgument), actualTypeArgument);
         }
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByBean(Class<?> parent, Class<?> classz, Type type) {
+    private List<APIDoc.Field> parseAPIDocFieldByBean(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
         List<APIDoc.Field> fields = new ArrayList<>();
 
-        if (parent != null && parent.equals(classz)) {
+        if (parents.contains(classz)) {
             return fields;
         }
 
         if (ClassUtils.isObjectType(classz)) {
-            Type actualTypeArgument = getActualTypeArgument(type, 0);
+            int typeVariableIndex = getTypeVariableIndex(parents.get(parents.size() - 1), type);
+            Type actualTypeArgument = getActualTypeArgument(rootType, typeVariableIndex);
             if (actualTypeArgument == null) {
                 return fields;
             }
 
-            return parseAPIDocFieldByClass(parent, getRawType(actualTypeArgument), actualTypeArgument);
+            return parseAPIDocFieldByClass(actualTypeArgument, parents, getRawType(actualTypeArgument), getActualTypeArgument(type, typeVariableIndex));
         }
 
         if (ClassUtils.isMapType(classz)) {
@@ -164,7 +168,11 @@ public class APIDocBuilder {
 
             Class<?> rawType = getRawType(actualTypeArgument);
             APIDoc.Field field = new APIDoc.Field("dynamic key", APIDocFieldType.parse(rawType), false);
-            field.setChilds(parseAPIDocFieldByClass(parent, rawType, actualTypeArgument));
+            List<APIDoc.Field> childs = parseAPIDocFieldByClass(rootType, parents, rawType, actualTypeArgument);
+            if (!CollectionUtils.isEmpty(childs)) {
+                field.setChilds(childs);
+            }
+
             fields.add(field);
             return fields;
         }
@@ -172,7 +180,7 @@ public class APIDocBuilder {
         try {
             return Arrays.stream(Introspector.getBeanInfo(classz, Object.class).getPropertyDescriptors())
                     .filter(i -> i.getReadMethod() != null)
-                    .map(i -> this.parseAPIDocFieldByPropertyDescriptor(classz, i, type))
+                    .map(i -> this.parseAPIDocFieldByPropertyDescriptor(rootType, parents, classz, i))
                     .collect(Collectors.toList());
         } catch (IntrospectionException ignored) {
         }
@@ -180,17 +188,33 @@ public class APIDocBuilder {
         return fields;
     }
 
-    private APIDoc.Field parseAPIDocFieldByPropertyDescriptor(Class<?> classz, PropertyDescriptor propertyDescriptor, Type type) {
+    private APIDoc.Field parseAPIDocFieldByPropertyDescriptor(Type rootType, List<Class<?>> parents, Class<?> classz, PropertyDescriptor propertyDescriptor) {
         APIDoc.Field field = new APIDoc.Field(propertyDescriptor.getName(),
                 APIDocFieldType.parse(propertyDescriptor.getPropertyType()),
                 hasRequiredAnnotation(classz, propertyDescriptor));
 
         if (ClassUtils.isObjectType(propertyDescriptor.getPropertyType())) {
-            Optional.ofNullable(getActualTypeArgument(type, 0)).ifPresent(t -> field.setType(APIDocFieldType.parse(getRawType(t))));
+            Optional.ofNullable(getActualTypeArgument(rootType, 0)).ifPresent(t -> field.setType(APIDocFieldType.parse(getRawType(t))));
         }
-        field.setChilds(parseAPIDocFieldByClass(classz, propertyDescriptor.getPropertyType(), type));
+
+        parents.add(classz);
+        List<APIDoc.Field> childs = parseAPIDocFieldByClass(rootType, parents, propertyDescriptor.getPropertyType(), propertyDescriptor.getReadMethod().getGenericReturnType());
+        if (!CollectionUtils.isEmpty(childs)) {
+            field.setChilds(childs);
+        }
 
         return field;
+    }
+
+    private int getTypeVariableIndex(Class<?> classz, Type type) {
+        TypeVariable<? extends Class<?>>[] typeParameters = classz.getTypeParameters();
+        for (int i = 0; i < typeParameters.length; i++) {
+            if (typeParameters[i].getTypeName().equals(type.getTypeName())) {
+                return i;
+            }
+        }
+
+        return 0;
     }
 
     private Type getActualTypeArgument(Type type, int index) {
@@ -205,11 +229,13 @@ public class APIDocBuilder {
     }
 
     private Class<?> getRawType(Type type) {
+        //TODO GenericArrayType
         if (type instanceof Class) {
             return (Class<?>) type;
         } else if (type instanceof WildcardTypeImpl) {
-            //TODO
-            return Object.class;
+            return Object.class;//TODO
+        } else if (type instanceof TypeVariableImpl) {
+            return Object.class;//TODO
         } else {
             return ((ParameterizedTypeImpl) type).getRawType();
         }

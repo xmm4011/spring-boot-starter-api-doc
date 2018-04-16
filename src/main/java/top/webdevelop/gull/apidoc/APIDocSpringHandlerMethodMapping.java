@@ -107,8 +107,8 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
                 logger.info("APIDoc detect RequestMappingInfo: {}", mapping);
                 logger.info("APIDoc detect Method {}", invocableMethod);
 
-                APIDocMetadataPath path = APIDocMetadataPath.newBuilder().setApiDocProperties(apiDocProperties).setMethod(invocableMethod).build();
                 APIDoc doc = APIDocBuilder.newInstance().setParameterNameDiscoverer(parameterNameDiscoverer).setRequestMappingInfo(mapping).setMethod(invocableMethod).build();
+                APIDocMetadataPath path = APIDocMetadataPath.newBuilder().setApiDocProperties(apiDocProperties).setMethod(invocableMethod).setApiDoc(doc).build();
                 APIDocMetadataGenerator.newInstance().generate(path, doc);
 
                 this.menu = buildAPIDocMenu(typeInfo, this.menu, path, doc);
@@ -125,11 +125,11 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
         }
         String[] splitPackage = path.getRelativePackage().split("\\.");
         String tabTitle = splitPackage.length > 1 ? splitPackage[1] : "default";
-        String pageTitle = Optional.ofNullable(removeBrackets(typeInfo.getPatternsCondition().toString())).filter(x -> x.length() > 0).orElse("default");
+        String pageTitle = Optional.ofNullable(APIDocBuilder.newInstance().setRequestMappingInfo(typeInfo).parseAPIDocUrl()).filter(x -> x.length() > 0).orElse("default");
         APIDocMenu.Tab tab = menu.getTabs().stream().filter(i -> i.getTitle().equals(tabTitle)).findFirst().orElse(new APIDocMenu.Tab(tabTitle));
         APIDocMenu.Page page = tab.getPages().stream().filter(i -> i.getTitle().equals(pageTitle)).findFirst().orElse(new APIDocMenu.Page(pageTitle));
 
-        page.getMenus().add(new APIDocMenu.Menu(doc.getUrl(), "." + path.getRelativeFileName()));
+        page.getMenus().add(new APIDocMenu.Menu(doc.getUrl(), doc.getAction(), "." + path.getRelativeFileName()));
         tab.getPages().add(page);
         menu.getTabs().add(tab);
 
@@ -195,12 +195,5 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
     private boolean isHandler(Class<?> beanType) {
         return (AnnotatedElementUtils.hasAnnotation(beanType, Controller.class) ||
                 AnnotatedElementUtils.hasAnnotation(beanType, RequestMapping.class));
-    }
-
-    private String removeBrackets(String str) {
-        if (str == null || str.length() < 2) {
-            return str;
-        }
-        return str.substring(1, str.length() - 1);
     }
 }

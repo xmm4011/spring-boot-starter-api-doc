@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -21,18 +22,20 @@ public class APIDocMenu implements Serializable {
     }
 
     @Data
-    @JSONType(orders = {"title", "pages"})
+    @JSONType(orders = {"title", "mapping", "pages"})
     public static class Tab implements Serializable, Comparable<Tab> {
         private String title;
+        private String mapping;
         private Set<Page> pages;
 
         public Tab() {
             this.pages = new TreeSet<>();
         }
 
-        public Tab(String title) {
+        public Tab(String mapping) {
             this();
-            this.title = title;
+            this.title = mapping;
+            this.mapping = mapping;
         }
 
         @Override
@@ -43,36 +46,38 @@ public class APIDocMenu implements Serializable {
 
             Tab tab = (Tab) o;
 
-            return title.equals(tab.title);
+            return mapping.equals(tab.mapping);
         }
 
         @Override
         public int hashCode() {
             int result = super.hashCode();
-            result = 31 * result + title.hashCode();
+            result = 31 * result + mapping.hashCode();
             return result;
         }
 
 
         @Override
         public int compareTo(Tab o) {
-            return this.title.compareTo(o.title);
+            return this.mapping.compareTo(o.mapping);
         }
     }
 
     @Data
-    @JSONType(orders = {"title", "menus"})
+    @JSONType(orders = {"title", "mapping", "menus"})
     public static class Page implements Serializable, Comparable<Page> {
         private String title;
+        private String mapping;
         private Set<Menu> menus;
 
         public Page() {
-            this.menus = new LinkedHashSet<>();
+            this.menus = new TreeSet<>();
         }
 
-        public Page(String title) {
+        public Page(String mapping) {
             this();
-            this.title = title;
+            this.title = mapping;
+            this.mapping = mapping;
         }
 
         @Override
@@ -83,26 +88,40 @@ public class APIDocMenu implements Serializable {
 
             Page page = (Page) o;
 
-            return title.equals(page.title);
+            return mapping.equals(page.mapping);
         }
 
         @Override
         public int hashCode() {
             int result = super.hashCode();
-            result = 31 * result + title.hashCode();
+            result = 31 * result + mapping.hashCode();
             return result;
         }
 
         @Override
         public int compareTo(Page o) {
-            return this.title.compareTo(o.title);
+            return this.mapping.compareTo(o.mapping);
         }
     }
 
     @Data
-    @AllArgsConstructor
-    public static class Menu implements Serializable {
+    @JSONType(orders = {"title", "mapping", "action", "url"})
+    public static class Menu implements Serializable, Comparable<Menu> {
         private String title;
+        private String mapping;
+        private String action;
         private String url;
+
+        public Menu(String mapping, String action, String url) {
+            this.title = mapping;
+            this.mapping = mapping;
+            this.action = action;
+            this.url = url;
+        }
+
+        @Override
+        public int compareTo(Menu o) {
+            return Optional.of(this.mapping.compareTo(o.mapping)).filter(x -> x != 0).orElseGet(() -> this.action.compareTo(o.action));
+        }
     }
 }

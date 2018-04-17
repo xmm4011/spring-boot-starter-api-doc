@@ -117,19 +117,18 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
     }
 
     private APIDocMenu buildAPIDocMenu(RequestMappingInfo typeInfo, APIDocMenu menu, APIDocMetadataPath path, APIDoc doc) {
-        if (!apiDocProperties.isMenu()) {
-            return menu;
-        }
         if (menu == null) {
             menu = new APIDocMenu();
         }
         String[] splitPackage = path.getRelativePackage().split("\\.");
-        String tabTitle = splitPackage.length > 1 ? splitPackage[1] : "default";
-        String pageTitle = Optional.ofNullable(APIDocBuilder.newInstance().setRequestMappingInfo(typeInfo).parseAPIDocUrl()).filter(x -> x.length() > 0).orElse("default");
-        APIDocMenu.Tab tab = menu.getTabs().stream().filter(i -> i.getTitle().equals(tabTitle)).findFirst().orElse(new APIDocMenu.Tab(tabTitle));
-        APIDocMenu.Page page = tab.getPages().stream().filter(i -> i.getTitle().equals(pageTitle)).findFirst().orElse(new APIDocMenu.Page(pageTitle));
+        String tabMapping = splitPackage.length > 1 ? splitPackage[1] : "default";
+        String pageMapping = Optional.ofNullable(APIDocBuilder.newInstance().setRequestMappingInfo(typeInfo).parseAPIDocUrl()).filter(x -> x.length() > 0).orElse("default");
+        String menuTitle = Optional.ofNullable(doc.getUrl().replace(pageMapping, "")).filter(x -> x.length() > 0).orElse("/");
 
-        page.getMenus().add(new APIDocMenu.Menu(doc.getUrl(), doc.getAction(), "." + path.getRelativeFileName()));
+        APIDocMenu.Tab tab = menu.getTabs().stream().filter(i -> i.getTitle().equals(tabMapping)).findFirst().orElse(new APIDocMenu.Tab(tabMapping));
+        APIDocMenu.Page page = tab.getPages().stream().filter(i -> i.getTitle().equals(pageMapping)).findFirst().orElse(new APIDocMenu.Page(pageMapping));
+
+        page.getMenus().add(new APIDocMenu.Menu(menuTitle, doc.getUrl(), doc.getAction(), "." + path.getRelativeFileName()));
         tab.getPages().add(page);
         menu.getTabs().add(tab);
 

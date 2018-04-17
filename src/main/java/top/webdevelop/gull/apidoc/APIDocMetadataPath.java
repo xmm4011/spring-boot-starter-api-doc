@@ -18,7 +18,6 @@ public class APIDocMetadataPath {
     private String fileName;
     private String absoluteFileName;
     private String relativeFileName;
-    private boolean override;
 
     private APIDocMetadataPath(Builder builder) {
         this.relativePackage = builder.method.getDeclaringClass().getPackage().getName()
@@ -28,10 +27,9 @@ public class APIDocMetadataPath {
                 .orElseGet(() -> this.relativePackage.replace(".", "/")));
         this.absolutePath = FilenameUtils.normalizeNoEndSeparator(builder.apiDocProperties.getOutputRootPath() + this.relativePath);
 
-        this.fileName = builder.method.getName() + "_" + builder.apiDoc.getAction() + ".json";
+        this.fileName = builder.method.getName() + "_" + builder.apiDoc.getAction() + "_" + Math.abs(builder.apiDoc.getUrl().hashCode()) % 10 + ".json";
         this.absoluteFileName = FilenameUtils.concat(this.absolutePath, this.fileName);
         this.relativeFileName = FilenameUtils.concat(this.relativePath, this.fileName);
-        this.override = builder.apiDocProperties.isOverride();
     }
 
     public static Builder newBuilder() {

@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 /**
  * //TODO 暂未处理多个泛型参数
  * //TODO 暂未处理嵌套List
+ * //TODO 相同深度支持合并
+ * //TODO API删除的情况
  * Created by xumingming on 2018/3/24.
  */
 public class APIDocBuilder {
@@ -102,37 +104,37 @@ public class APIDocBuilder {
         return parseAPIDocFieldByClass(this.method.getGenericReturnType(), parents, returnType, this.method.getGenericReturnType());
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, MethodParameter parameter, Class<?> classz, Type type) {
+    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, MethodParameter parameter, Class<?> clazz, Type type) {
         List<APIDoc.Field> fields = new ArrayList<>();
 
-        if (ClassUtils.isSingleFieldType(classz)) {
+        if (ClassUtils.isSingleFieldType(clazz)) {
             RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
             APIDoc.Field field = new APIDoc.Field((requestParam == null || StringUtils.isEmpty(requestParam.name())) ?
-                    parameter.getParameterName() : requestParam.name(), APIDocFieldType.parse(classz), requestParam != null && requestParam.required());
+                    parameter.getParameterName() : requestParam.name(), APIDocFieldType.parse(clazz), requestParam != null && requestParam.required());
 
             fields.add(field);
         } else {
             List<Class<?>> parents = new ArrayList<>();
-            parents.add(classz.getSuperclass());
-            fields.addAll(parseAPIDocFieldByClass(rootType, parents, classz, type));
+            parents.add(clazz.getSuperclass());
+            fields.addAll(parseAPIDocFieldByClass(rootType, parents, clazz, type));
         }
 
         return fields;
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
-        if (ClassUtils.isListType(classz)) {
-            return parseAPIDocFieldByList(rootType, parents, classz, type);
+    private List<APIDoc.Field> parseAPIDocFieldByClass(Type rootType, List<Class<?>> parents, Class<?> clazz, Type type) {
+        if (ClassUtils.isListType(clazz)) {
+            return parseAPIDocFieldByList(rootType, parents, clazz, type);
         }
-        if (ClassUtils.isMappingType(classz)) {
-            return parseAPIDocFieldByBean(rootType, parents, classz, type);
+        if (ClassUtils.isMappingType(clazz)) {
+            return parseAPIDocFieldByBean(rootType, parents, clazz, type);
         }
         return new ArrayList<>();
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByList(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
-        if (classz.isArray()) {
-            return parseAPIDocFieldByClass(rootType, parents, classz.getComponentType(), type);
+    private List<APIDoc.Field> parseAPIDocFieldByList(Type rootType, List<Class<?>> parents, Class<?> clazz, Type type) {
+        if (clazz.isArray()) {
+            return parseAPIDocFieldByClass(rootType, parents, clazz.getComponentType(), type);
         } else {
             Type actualTypeArgument = getActualTypeArgument(type, 0);
             if (actualTypeArgument == null) {
@@ -143,14 +145,14 @@ public class APIDocBuilder {
         }
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByBean(Type rootType, List<Class<?>> parents, Class<?> classz, Type type) {
+    private List<APIDoc.Field> parseAPIDocFieldByBean(Type rootType, List<Class<?>> parents, Class<?> clazz, Type type) {
         List<APIDoc.Field> fields = new ArrayList<>();
 
-        if (parents.contains(classz)) {
+        if (parents.contains(clazz)) {
             return fields;
         }
 
-        if (ClassUtils.isObjectType(classz)) {
+        if (ClassUtils.isObjectType(clazz)) {
             int typeVariableIndex = getTypeVariableIndex(parents.get(parents.size() - 1), type);
             Type actualTypeArgument = getActualTypeArgument(rootType, typeVariableIndex);
             if (actualTypeArgument == null) {
@@ -160,7 +162,7 @@ public class APIDocBuilder {
             return parseAPIDocFieldByClass(actualTypeArgument, parents, getRawType(actualTypeArgument), getActualTypeArgument(type, typeVariableIndex));
         }
 
-        if (ClassUtils.isMapType(classz)) {
+        if (ClassUtils.isMapType(clazz)) {
             Type actualTypeArgument = getActualTypeArgument(type, 1);
             if (actualTypeArgument == null) {
                 return fields;
@@ -178,26 +180,27 @@ public class APIDocBuilder {
         }
 
         try {
-            return Arrays.stream(Introspector.getBeanInfo(classz, Object.class).getPropertyDescriptors())
+            return Arrays.stream(Introspector.getBeanInfo(clazz, Object.class).getPropertyDescriptors())
                     .filter(i -> i.getReadMethod() != null)
-                    .map(i -> this.parseAPIDocFieldByPropertyDescriptor(rootType, parents, classz, i))
+                    .map(i -> this.parseAPIDocFieldByPropertyDescriptor(rootType, parents, clazz, i))
                     .collect(Collectors.toList());
-        } catch (IntrospectionException ignored) {
+        } catch (IntrospectionException e) {
+            logger.warn("parseAPIDocFieldByBean fail", e);
         }
 
         return fields;
     }
 
-    private APIDoc.Field parseAPIDocFieldByPropertyDescriptor(Type rootType, List<Class<?>> parents, Class<?> classz, PropertyDescriptor propertyDescriptor) {
+    private APIDoc.Field parseAPIDocFieldByPropertyDescriptor(Type rootType, List<Class<?>> parents, Class<?> clazz, PropertyDescriptor propertyDescriptor) {
         APIDoc.Field field = new APIDoc.Field(propertyDescriptor.getName(),
                 APIDocFieldType.parse(propertyDescriptor.getPropertyType()),
-                hasRequiredAnnotation(classz, propertyDescriptor));
+                hasRequiredAnnotation(clazz, propertyDescriptor));
 
         if (ClassUtils.isObjectType(propertyDescriptor.getPropertyType())) {
             Optional.ofNullable(getActualTypeArgument(rootType, 0)).ifPresent(t -> field.setType(APIDocFieldType.parse(getRawType(t))));
         }
 
-        parents.add(classz);
+        parents.add(clazz);
         List<APIDoc.Field> childs = parseAPIDocFieldByClass(rootType, parents, propertyDescriptor.getPropertyType(), propertyDescriptor.getReadMethod().getGenericReturnType());
         if (!CollectionUtils.isEmpty(childs)) {
             field.setChilds(childs);
@@ -206,8 +209,8 @@ public class APIDocBuilder {
         return field;
     }
 
-    private int getTypeVariableIndex(Class<?> classz, Type type) {
-        TypeVariable<? extends Class<?>>[] typeParameters = classz.getTypeParameters();
+    private int getTypeVariableIndex(Class<?> clazz, Type type) {
+        TypeVariable<? extends Class<?>>[] typeParameters = clazz.getTypeParameters();
         for (int i = 0; i < typeParameters.length; i++) {
             if (typeParameters[i].getTypeName().equals(type.getTypeName())) {
                 return i;
@@ -241,19 +244,24 @@ public class APIDocBuilder {
         }
     }
 
-    private boolean hasRequiredAnnotation(Class<?> classz, PropertyDescriptor propertyDescriptor) {
-        try {
-            Method readMethod = propertyDescriptor.getReadMethod();
-            Field field = classz.getDeclaredField(propertyDescriptor.getName());
-
-            if (readMethod.getAnnotation(NotNull.class) != null || readMethod.getAnnotation(NotBlank.class) != null || readMethod.getAnnotation(NotEmpty.class) != null
-                    || field.getAnnotation(NotNull.class) != null || field.getAnnotation(NotBlank.class) != null || field.getAnnotation(NotEmpty.class) != null) {
-                return true;
+    private boolean hasRequiredAnnotation(Class<?> clazz, PropertyDescriptor propertyDescriptor) {
+        Method readMethod = propertyDescriptor.getReadMethod();
+        Field field = null;
+        for (; clazz != Object.class; clazz = clazz.getSuperclass()) {
+            try {
+                field = clazz.getDeclaredField(propertyDescriptor.getName());
+                break;
+            } catch (NoSuchFieldException ignored) {
             }
-        } catch (NoSuchFieldException ignored) {
         }
 
-        return false;
+        return readMethod.getAnnotation(NotNull.class) != null
+                || readMethod.getAnnotation(NotBlank.class) != null
+                || readMethod.getAnnotation(NotEmpty.class) != null
+                || (field != null && (field.getAnnotation(NotNull.class) != null
+                || field.getAnnotation(NotBlank.class) != null
+                || field.getAnnotation(NotEmpty.class) != null
+        ));
     }
 
     private String removeBrackets(String str) {

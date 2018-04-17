@@ -15,8 +15,6 @@ import java.util.Arrays;
 @Data
 public class APIDocProperties {
     private boolean auto;
-    private boolean menu;
-    private boolean override;
     private String webRootPackage = "";
     private String includeBeanNames;
     private String includeMethodNames;

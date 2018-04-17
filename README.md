@@ -24,8 +24,6 @@ mvn clean install
 
 ```properties
 api.doc.auto=true
-#api.doc.menu=false
-#api.doc.override=false
 api.doc.web-root-package=top.webdevelop.gull.web
 #api.doc.include-bean-names=
 #api.doc.include-method-names=

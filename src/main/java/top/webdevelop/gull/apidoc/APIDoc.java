@@ -1,9 +1,9 @@
 package top.webdevelop.gull.apidoc;
 
 import com.alibaba.fastjson.annotation.JSONType;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.List;
@@ -12,6 +12,7 @@ import java.util.List;
  * Created by xumingming on 2018/3/24.
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 @JSONType(orders = {"url", "action", "request", "response"})
 public class APIDoc implements Serializable {
@@ -21,6 +22,7 @@ public class APIDoc implements Serializable {
     private List<Field> response;
 
     @Data
+    @NoArgsConstructor
     @JSONType(orders = {"name", "type", "required", "desc", "childs"})
     static class Field implements Serializable {
         private String name;

@@ -1,11 +1,10 @@
 package top.webdevelop.gull.apidoc;
 
 import com.alibaba.fastjson.annotation.JSONType;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -105,6 +104,7 @@ public class APIDocMenu implements Serializable {
     }
 
     @Data
+    @NoArgsConstructor
     @JSONType(orders = {"title", "mapping", "action", "url"})
     public static class Menu implements Serializable, Comparable<Menu> {
         private String title;
@@ -112,11 +112,29 @@ public class APIDocMenu implements Serializable {
         private String action;
         private String url;
 
-        public Menu(String mapping, String action, String url) {
-            this.title = mapping;
+        public Menu(String title, String mapping, String action, String url) {
+            this.title = title;
             this.mapping = mapping;
             this.action = action;
             this.url = url;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+
+            Menu menu = (Menu) o;
+
+            return url.equals(menu.url);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + url.hashCode();
+            return result;
         }
 
         @Override

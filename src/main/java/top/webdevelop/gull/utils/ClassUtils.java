@@ -13,7 +13,7 @@ import java.util.Map;
  * Created by xumingming on 2018/3/25.
  */
 public class ClassUtils {
-    public static boolean isMappingType(Class classz) {
+    public static boolean isBeanType(Class classz) {
         return !isSingleFieldType(classz) && !isListType(classz);
     }
 

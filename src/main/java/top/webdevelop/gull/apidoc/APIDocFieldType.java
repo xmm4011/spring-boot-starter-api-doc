@@ -43,7 +43,7 @@ public enum APIDocFieldType {
                     || classz.equals(Double.class) || classz.equals(double.class)) {
                 return APIDocFieldType.decimal;
             }
-        } else if (ClassUtils.isMappingType(classz)) {
+        } else if (ClassUtils.isBeanType(classz)) {
             return APIDocFieldType.object;
         } else if (ClassUtils.isListType(classz)) {
             return APIDocFieldType.list;

@@ -35,7 +35,7 @@ api.doc.output-root-path=/Users/xxx/Downloads/test/doc
 
 ### 4. 发布output静态资源
 
-* 可以建一个repo、指定目录输出接口元数据
-* 需要中文的情况下、修改desc属性、加上中文
-* 提交元数据文件、持续集成自动部署web容器
+* 可以建一个Repository、输出接口Metadata至该Repository根目录
+* 需要中文的情况下、修改title或desc属性、加上中文
+* 提交Metadata文件、持续集成自动部署至web容器或对象存储
  

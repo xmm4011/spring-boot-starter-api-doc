@@ -22,14 +22,15 @@ public class APIDocMetadataPath {
     private APIDocMetadataPath(Builder builder) {
         this.relativePackage = builder.method.getDeclaringClass().getPackage().getName()
                 .replace(builder.apiDocProperties.getWebRootPackage(), "");
-        this.relativePath = FilenameUtils.normalizeNoEndSeparator("/data/" + Optional.ofNullable(builder.apiDocProperties.getOutputCurrentPath())
+        String currentPath = Optional.ofNullable(builder.apiDocProperties.getOutputCurrentPath())
                 .filter(c -> c.length() > 0)
-                .orElseGet(() -> this.relativePackage.replace(".", "/")));
-        this.absolutePath = FilenameUtils.normalizeNoEndSeparator(builder.apiDocProperties.getOutputRootPath() + this.relativePath);
+                .orElseGet(() -> this.relativePackage.replace(".", "/"));
+        this.relativePath = FilenameUtils.normalizeNoEndSeparator("/data/" + currentPath, true);
+        this.absolutePath = FilenameUtils.normalize(builder.apiDocProperties.getOutputRootPath() + this.relativePath, true);
 
         this.fileName = builder.method.getName() + "_" + builder.apiDoc.getAction() + "_" + Math.abs(builder.apiDoc.getUrl().hashCode()) % 10 + ".json";
+        this.relativeFileName = FilenameUtils.normalize(this.relativePath + "/" + this.fileName, true);
         this.absoluteFileName = FilenameUtils.concat(this.absolutePath, this.fileName);
-        this.relativeFileName = FilenameUtils.concat(this.relativePath, this.fileName);
     }
 
     public static Builder newBuilder() {

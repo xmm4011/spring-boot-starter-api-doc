@@ -122,8 +122,13 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
         }
         String[] splitPackage = path.getRelativePackage().split("\\.");
         String tabMapping = splitPackage.length > 1 ? splitPackage[1] : "default";
-        String pageMapping = Optional.ofNullable(APIDocBuilder.newInstance().setRequestMappingInfo(typeInfo).parseAPIDocUrl()).filter(x -> x.length() > 0).orElse("default");
-        String menuTitle = Optional.ofNullable(doc.getUrl().replace(pageMapping, "")).filter(x -> x.length() > 0).orElse("/");
+        String pageMapping = Optional.ofNullable(typeInfo)
+                .map(m -> APIDocBuilder.newInstance().setRequestMappingInfo(m).parseAPIDocUrl())
+                .filter(x -> x.length() > 0)
+                .orElse("default");
+        String menuTitle = Optional.ofNullable(doc.getUrl().replace(pageMapping, ""))
+                .filter(x -> x.length() > 0)
+                .orElse("/");
 
         APIDocMenu.Tab tab = menu.getTabs().stream().filter(i -> i.getTitle().equals(tabMapping)).findFirst().orElse(new APIDocMenu.Tab(tabMapping));
         APIDocMenu.Page page = tab.getPages().stream().filter(i -> i.getTitle().equals(pageMapping)).findFirst().orElse(new APIDocMenu.Page(pageMapping));

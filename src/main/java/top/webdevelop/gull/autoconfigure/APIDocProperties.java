@@ -1,6 +1,7 @@
 package top.webdevelop.gull.autoconfigure;
 
 import lombok.Data;
+import org.apache.commons.io.FileUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -22,8 +23,16 @@ public class APIDocProperties {
     private String includeMethodNames;
     private String excludeBeanNames;
     private String excludeMethodNames;
-    private String outputRootPath = "/";
+    private String outputRootPath;
     private String outputCurrentPath;
+
+    public String getOutputRootPath() {
+        if (StringUtils.hasText(outputRootPath)) {
+            return outputRootPath.replace("~", FileUtils.getUserDirectoryPath());
+        } else {
+            return FileUtils.getUserDirectoryPath() + "/apidoc";
+        }
+    }
 
     public boolean hasIncludeBean(String beanName) {
         return StringUtils.isEmpty(includeMethodNames) || !contains(includeMethodNames, beanName);

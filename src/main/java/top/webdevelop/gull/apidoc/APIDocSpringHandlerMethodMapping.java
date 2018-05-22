@@ -14,6 +14,7 @@ import org.springframework.util.StringValueResolver;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import top.webdevelop.gull.annotation.APIDocIgnore;
 import top.webdevelop.gull.autoconfigure.APIDocProperties;
 
 import java.lang.reflect.AnnotatedElement;
@@ -100,7 +101,9 @@ public class APIDocSpringHandlerMethodMapping implements EmbeddedValueResolverAw
                         || !apiDocProperties.hasIncludeBean(handler.toString())
                         || !apiDocProperties.hasIncludeMethod(invocableMethod.getName())
                         || apiDocProperties.hasExcludeBean(handler.toString())
-                        || apiDocProperties.hasExcludeMethod(invocableMethod.getName())) {
+                        || apiDocProperties.hasExcludeMethod(invocableMethod.getName())
+                        || Optional.ofNullable(userType.getAnnotation(APIDocIgnore.class)).map(APIDocIgnore::value).orElse(false)
+                        || Optional.ofNullable(invocableMethod.getAnnotation(APIDocIgnore.class)).map(APIDocIgnore::value).orElse(false)) {
                     continue;
                 }
 

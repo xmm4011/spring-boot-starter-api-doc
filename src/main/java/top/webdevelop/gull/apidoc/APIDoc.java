@@ -42,5 +42,10 @@ public class APIDoc implements Serializable {
             this(name, type);
             this.required = required;
         }
+
+        public Field(String name, APIDocFieldType type, boolean required, List<Field> childs) {
+            this(name, type, required);
+            this.childs = childs;
+        }
     }
 }

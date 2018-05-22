@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 import sun.reflect.generics.reflectiveObjects.TypeVariableImpl;
 import sun.reflect.generics.reflectiveObjects.WildcardTypeImpl;
+import top.webdevelop.gull.annotation.APIDocIgnore;
 import top.webdevelop.gull.utils.ClassUtils;
 
 import javax.servlet.http.HttpServletRequest;
@@ -23,6 +24,7 @@ import javax.validation.constraints.NotNull;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -80,7 +82,7 @@ public class APIDocBuilder {
 
         return parameters.stream()
                 .filter(this::nonIgnoreRequestParam)
-                .map(parameter -> this.parseAPIDocFieldByClass(parameter.getGenericParameterType(), parameter, parameter.getParameterType()))
+                .map(parameter -> this.parseAPIDocFieldByParameter(parameter.getGenericParameterType(), parameter, parameter.getParameterType()))
                 .reduce(new ArrayList<>(), (left, right) -> {
                     left.addAll(right);
                     return left;
@@ -102,21 +104,21 @@ public class APIDocBuilder {
         return parseAPIDocFieldByClass(this.method.getGenericReturnType(), beanClasses, returnType.getSuperclass(), returnType, this.method.getGenericReturnType());
     }
 
-    private List<APIDoc.Field> parseAPIDocFieldByClass(Type parentType, MethodParameter parameter, Class<?> clazz) {
-        List<APIDoc.Field> fields = new ArrayList<>();
-
+    private List<APIDoc.Field> parseAPIDocFieldByParameter(Type parentType, MethodParameter parameter, Class<?> clazz) {
         if (ClassUtils.isSingleFieldType(clazz)) {
             RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
-            APIDoc.Field field = new APIDoc.Field((requestParam == null || StringUtils.isEmpty(requestParam.name())) ?
-                    parameter.getParameterName() : requestParam.name(), APIDocFieldType.parse(clazz), requestParam != null && requestParam.required());
-
-            fields.add(field);
-        } else {
-            List<Class<?>> beanClasses = new ArrayList<>();
-            beanClasses.add(clazz.getSuperclass());
-            fields.addAll(parseAPIDocFieldByClass(parentType, beanClasses, clazz.getSuperclass(), clazz, parentType));
+            APIDoc.Field field = new APIDoc.Field((requestParam == null || StringUtils.isEmpty(requestParam.name())) ? parameter.getParameterName() : requestParam.name(),
+                    APIDocFieldType.parse(clazz),
+                    requestParam != null && requestParam.required());
+            return Collections.singletonList(field);
         }
 
+        List<Class<?>> beanClasses = new ArrayList<>();
+        beanClasses.add(clazz.getSuperclass());
+        List<APIDoc.Field> fields = parseAPIDocFieldByClass(parentType, beanClasses, clazz.getSuperclass(), clazz, parentType);
+        if (ClassUtils.isListType(clazz)) {
+            return Collections.singletonList(new APIDoc.Field("direct parameter", APIDocFieldType.parse(clazz), false, fields));
+        }
         return fields;
     }
 
@@ -127,6 +129,7 @@ public class APIDocBuilder {
         if (ClassUtils.isBeanType(clazz)) {
             return parseAPIDocFieldByBean(parentType, beanClasses, parent, clazz, type);
         }
+
         return new ArrayList<>();
     }
 
@@ -139,7 +142,12 @@ public class APIDocBuilder {
                 return new ArrayList<>();
             }
 
-            return parseAPIDocFieldByClass(parentType, beanClasses, parent, getRawType(actualTypeArgument), actualTypeArgument);
+            Class<?> rawType = getRawType(actualTypeArgument);
+            if (ClassUtils.isSingleFieldType(rawType)) {
+                return Collections.singletonList(new APIDoc.Field("direct parameter", APIDocFieldType.parse(rawType), false));
+            }
+
+            return parseAPIDocFieldByClass(parentType, beanClasses, parent, rawType, actualTypeArgument);
         }
     }
 
@@ -181,6 +189,7 @@ public class APIDocBuilder {
             return Arrays.stream(Introspector.getBeanInfo(clazz, Object.class).getPropertyDescriptors())
                     .filter(i -> i.getReadMethod() != null)
                     .map(i -> this.parseAPIDocFieldByPropertyDescriptor(type, beanClasses, clazz, i))
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (IntrospectionException e) {
             logger.warn("parseAPIDocFieldByBean fail", e);
@@ -190,6 +199,11 @@ public class APIDocBuilder {
     }
 
     private APIDoc.Field parseAPIDocFieldByPropertyDescriptor(Type parentType, List<Class<?>> beanClasses, Class<?> clazz, PropertyDescriptor propertyDescriptor) {
+        Field propertyField = getField(clazz, propertyDescriptor.getName());
+        if (propertyField != null && Optional.ofNullable(propertyField.getAnnotation(APIDocIgnore.class)).map(APIDocIgnore::value).orElse(false)) {
+            return null;
+        }
+
         APIDoc.Field field = new APIDoc.Field(propertyDescriptor.getName(),
                 APIDocFieldType.parse(propertyDescriptor.getPropertyType()),
                 hasRequiredAnnotation(clazz, propertyDescriptor));
@@ -198,7 +212,6 @@ public class APIDocBuilder {
             Optional.ofNullable(getActualTypeArgument(parentType, clazz, propertyDescriptor.getReadMethod().getGenericReturnType()))
                     .ifPresent(t -> field.setType(APIDocFieldType.parse(getRawType(t))));
         }
-
 
         List<APIDoc.Field> childs = parseAPIDocFieldByClass(parentType, beanClasses, clazz, propertyDescriptor.getPropertyType(), propertyDescriptor.getReadMethod().getGenericReturnType());
         if (!CollectionUtils.isEmpty(childs)) {
@@ -247,24 +260,45 @@ public class APIDocBuilder {
         }
     }
 
-    private boolean hasRequiredAnnotation(Class<?> clazz, PropertyDescriptor propertyDescriptor) {
-        Method readMethod = propertyDescriptor.getReadMethod();
+    private Field getField(Class<?> clazz, String name) {
         Field field = null;
         for (; clazz != Object.class; clazz = clazz.getSuperclass()) {
             try {
-                field = clazz.getDeclaredField(propertyDescriptor.getName());
+                field = clazz.getDeclaredField(name);
                 break;
             } catch (NoSuchFieldException ignored) {
             }
         }
 
-        return readMethod.getAnnotation(NotNull.class) != null
-                || readMethod.getAnnotation(NotBlank.class) != null
-                || readMethod.getAnnotation(NotEmpty.class) != null
-                || (field != null && (field.getAnnotation(NotNull.class) != null
-                || field.getAnnotation(NotBlank.class) != null
-                || field.getAnnotation(NotEmpty.class) != null
-        ));
+        return field;
+    }
+
+    private boolean hasRequiredAnnotation(Class<?> clazz, PropertyDescriptor propertyDescriptor) {
+        Method readMethod = propertyDescriptor.getReadMethod();
+        Field field = getField(clazz, propertyDescriptor.getName());
+
+        return hasAnnotation(readMethod, NotNull.class)
+                || hasAnnotation(readMethod, NotBlank.class)
+                || hasAnnotation(readMethod, NotEmpty.class)
+                || hasAnnotation(field, NotNull.class)
+                || hasAnnotation(field, NotBlank.class)
+                || hasAnnotation(field, NotEmpty.class);
+    }
+
+    private <T extends Annotation> boolean hasAnnotation(Method method, Class<T> annotationClass) {
+        if (method == null) {
+            return false;
+        }
+
+        return method.getAnnotation(annotationClass) != null;
+    }
+
+    private <T extends Annotation> boolean hasAnnotation(Field field, Class<T> annotationClass) {
+        if (field == null) {
+            return false;
+        }
+
+        return field.getAnnotation(annotationClass) != null;
     }
 
     private String removeBrackets(String str) {

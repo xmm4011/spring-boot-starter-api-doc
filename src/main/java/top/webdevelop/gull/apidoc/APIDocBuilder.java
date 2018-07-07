@@ -11,6 +11,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 import sun.reflect.generics.reflectiveObjects.TypeVariableImpl;
@@ -95,6 +96,9 @@ public class APIDocBuilder {
 
     private List<APIDoc.Field> parseAPIDocResponse() {
         Class<?> returnType = this.method.getReturnType();
+        if (returnType.equals(ModelAndView.class)) {
+            return Collections.emptyList();
+        }
         if (ClassUtils.isSingleFieldType(returnType)) {
             return Collections.singletonList(new APIDoc.Field("direct return", APIDocFieldType.parse(returnType), false));
         }

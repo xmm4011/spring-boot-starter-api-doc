@@ -14,7 +14,7 @@ mvn clean install
 <dependency>
     <groupId>top.webdevelop.gull</groupId>
     <artifactId>spring-boot-starter-api-doc</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.RELEASE</version>
 </dependency>
 ```
 
